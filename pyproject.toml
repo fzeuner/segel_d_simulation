@@ -1,0 +1,10 @@
+[project]
+name = "segel-d-simulation"
+version = "0.1.0"
+description = "Segelschein D theory exam trainer - interactive quiz GUI"
+readme = "README.md"
+requires-python = ">=3.14"
+dependencies = [
+    "pyside6>=6.11.1",
+    "qdarkstyle>=3.2.3",
+]
