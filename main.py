@@ -89,6 +89,7 @@ class QuizWindow(QWidget):
         question_font = QFont("Segoe UI", 15)
         score_font = QFont("Segoe UI", 11)
         answer_font = QFont("Segoe UI", 12)
+        description_font = QFont("Segoe UI", 10)
         button_font = QFont("Segoe UI", 11, QFont.Weight.DemiBold)
 
         root = QVBoxLayout(self)
@@ -113,6 +114,12 @@ class QuizWindow(QWidget):
         self.answers_layout = QVBoxLayout()
         self.answers_layout.setSpacing(8)
         root.addLayout(self.answers_layout)
+
+        self.description_label = QLabel()
+        self.description_label.setFont(description_font)
+        self.description_label.setWordWrap(True)
+        self.description_label.setStyleSheet("color: #9aa0a6;")
+        root.addWidget(self.description_label)
         root.addStretch()
 
         self.answer_font = answer_font
@@ -155,6 +162,7 @@ class QuizWindow(QWidget):
 
         self.category_label.setText(self.current.category)
         self.question_label.setText(self.current.text)
+        self.description_label.setText("")
         self._update_score_label()
 
         self._clear_answers()
@@ -187,6 +195,9 @@ class QuizWindow(QWidget):
         if all_correct:
             self.correct_count += 1
         self._update_score_label()
+
+        if self.current.description:
+            self.description_label.setText(self.current.description)
 
         if not self.result_shown and self.answered_count >= QUESTION_LIMIT:
             self.result_shown = True

@@ -23,6 +23,7 @@ class Question:
     category: str
     text: str
     answers: list[Answer]
+    description: str | None = None
 
     @property
     def correct_answers(self) -> set[str]:
@@ -38,7 +39,14 @@ def _parse_file(path: Path) -> list[Question]:
     questions: list[Question] = []
     for q in obj["questions"]:
         answers = [Answer(text=a["text"], correct=bool(a["correct"])) for a in q["answers"]]
-        questions.append(Question(category=category, text=q["question"], answers=answers))
+        questions.append(
+            Question(
+                category=category,
+                text=q["question"],
+                answers=answers,
+                description=q.get("description"),
+            )
+        )
 
     return questions
 

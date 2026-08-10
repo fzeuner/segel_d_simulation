@@ -1,6 +1,6 @@
 [project]
 name = "segel-d-simulation"
-version = "0.1.0"
+version = "1.0.0"
 description = "Segelschein D theory exam trainer - interactive quiz GUI"
 readme = "README.md"
 requires-python = ">=3.14"
