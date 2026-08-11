@@ -8,7 +8,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 QUESTIONS_DIR = Path(
-    os.path.expanduser("~/ownCloud/private/segeln/segelschein_d/theoretische")
+    os.path.expanduser("~/ownCloud/private/segeln/segelschein_d/theoretische/simulation")
 )
 
 
@@ -24,13 +24,14 @@ class Question:
     text: str
     answers: list[Answer]
     description: str | None = None
+    image: Path | None = None
 
     @property
     def correct_answers(self) -> set[str]:
         return {a.text for a in self.answers if a.correct}
 
 
-def _parse_file(path: Path) -> list[Question]:
+def _parse_file(path: Path, base_dir: Path) -> list[Question]:
     """Parse a JSON file with a top-level {"category": ..., "questions": [...]} object."""
     with path.open(encoding="utf-8") as f:
         obj = json.load(f)
@@ -39,12 +40,15 @@ def _parse_file(path: Path) -> list[Question]:
     questions: list[Question] = []
     for q in obj["questions"]:
         answers = [Answer(text=a["text"], correct=bool(a["correct"])) for a in q["answers"]]
+        image_rel = q.get("image")
+        image_path = (base_dir / image_rel).resolve() if image_rel else None
         questions.append(
             Question(
                 category=category,
                 text=q["question"],
                 answers=answers,
                 description=q.get("description"),
+                image=image_path,
             )
         )
 
@@ -61,7 +65,7 @@ def load_questions(base_dir: Path = QUESTIONS_DIR) -> list[Question]:
         if not path.is_file():
             continue
         try:
-            questions.extend(_parse_file(path))
+            questions.extend(_parse_file(path, base_dir))
         except (json.JSONDecodeError, KeyError, TypeError):
             # Skip files that aren't valid question files.
             continue

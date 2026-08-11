@@ -8,7 +8,8 @@ import sys
 from pathlib import Path
 
 import qdarkstyle
-from PySide6.QtGui import QFont, QMovie
+from PySide6.QtCore import Qt
+from PySide6.QtGui import QFont, QMovie, QPixmap
 from PySide6.QtWidgets import (
     QApplication,
     QCheckBox,
@@ -70,7 +71,7 @@ class QuizWindow(QWidget):
     def __init__(self, questions: list[Question]) -> None:
         super().__init__()
         self.setWindowTitle("Segelschein D - Theorie Training")
-        self.resize(750, 550)
+        self.resize(750, 750)
 
         self.questions = questions
         self.correct_count = 0
@@ -110,6 +111,11 @@ class QuizWindow(QWidget):
         self.question_label.setFont(question_font)
         self.question_label.setWordWrap(True)
         root.addWidget(self.question_label)
+
+        self.image_label = QLabel()
+        self.image_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.image_label.setVisible(False)
+        root.addWidget(self.image_label)
 
         self.answers_layout = QVBoxLayout()
         self.answers_layout.setSpacing(8)
@@ -164,6 +170,7 @@ class QuizWindow(QWidget):
         self.question_label.setText(self.current.text)
         self.description_label.setText("")
         self._update_score_label()
+        self._update_image()
 
         self._clear_answers()
         for answer in self.current.answers:
@@ -171,6 +178,17 @@ class QuizWindow(QWidget):
             row.set_font(self.answer_font)
             self.answers_layout.addWidget(row)
             self.answer_rows.append(row)
+
+    def _update_image(self) -> None:
+        if self.current is not None and self.current.image is not None and self.current.image.is_file():
+            pixmap = QPixmap(str(self.current.image))
+            if not pixmap.isNull():
+                scaled = pixmap.scaledToWidth(600, Qt.TransformationMode.SmoothTransformation)
+                self.image_label.setPixmap(scaled)
+                self.image_label.setVisible(True)
+                return
+        self.image_label.clear()
+        self.image_label.setVisible(False)
 
     def _check_answer(self) -> None:
         if self.answered or self.current is None:
