@@ -12,7 +12,7 @@ Interaktives Quiz zum üben, üben, üben!
 ### Via GitHub with `uv`
 
 ```bash
-git clone https://github.com/<your-username>/segel_d_simulation.git
+git clone https://github.com/fzeuner/segel_d_simulation.git
 cd segel_d_simulation
 uv sync
 ```
