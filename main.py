@@ -9,10 +9,11 @@ from pathlib import Path
 
 import qdarkstyle
 from PySide6.QtCore import Qt
-from PySide6.QtGui import QFont, QMovie, QPixmap
+from PySide6.QtGui import QFont, QKeyEvent, QMovie, QPixmap
 from PySide6.QtWidgets import (
     QApplication,
     QCheckBox,
+    QComboBox,
     QDialog,
     QFrame,
     QHBoxLayout,
@@ -73,7 +74,10 @@ class QuizWindow(QWidget):
         self.setWindowTitle("Segelschein D - Theorie Training")
         self.resize(750, 750)
 
+        self.all_questions = questions
         self.questions = questions
+        self.wrong_texts: set[str] = set()
+        self.repeat_wrong_mode = False
         self.correct_count = 0
         self.wrong_count = 0
         self.answered_count = 0
@@ -106,6 +110,20 @@ class QuizWindow(QWidget):
         self.score_label.setFont(score_font)
         top_row.addWidget(self.score_label)
         root.addLayout(top_row)
+
+        filter_row = QHBoxLayout()
+        self.category_combo = QComboBox()
+        categories = ["Alle"] + sorted({q.category for q in self.all_questions})
+        self.category_combo.addItems(categories)
+        self.category_combo.currentTextChanged.connect(self._on_category_changed)
+        filter_row.addWidget(self.category_combo)
+
+        self.repeat_wrong_button = QPushButton("Falsche wiederholen")
+        self.repeat_wrong_button.setCheckable(True)
+        self.repeat_wrong_button.clicked.connect(self._toggle_repeat_wrong)
+        filter_row.addWidget(self.repeat_wrong_button)
+        filter_row.addStretch()
+        root.addLayout(filter_row)
 
         self.question_label = QLabel()
         self.question_label.setFont(question_font)
@@ -152,6 +170,39 @@ class QuizWindow(QWidget):
         self.score_label.setText(
             f"Richtig: {self.correct_count}  |  Falsch: {self.wrong_count}  |  Fragen: {self.answered_count}"
         )
+
+    def _rebuild_pool(self) -> None:
+        category = self.category_combo.currentText()
+        base = (
+            self.all_questions
+            if category == "Alle"
+            else [q for q in self.all_questions if q.category == category]
+        )
+
+        if self.repeat_wrong_mode:
+            pool = [q for q in base if q.text in self.wrong_texts]
+            if not pool:
+                QMessageBox.information(
+                    self,
+                    "Keine falschen Antworten",
+                    "Es gibt aktuell keine falsch beantworteten Fragen in dieser Kategorie.",
+                )
+                self.repeat_wrong_mode = False
+                self.repeat_wrong_button.setChecked(False)
+                pool = base
+        else:
+            pool = base
+
+        self.questions = pool if pool else self.all_questions
+
+    def _on_category_changed(self, _text: str) -> None:
+        self._rebuild_pool()
+        self._next_question()
+
+    def _toggle_repeat_wrong(self) -> None:
+        self.repeat_wrong_mode = self.repeat_wrong_button.isChecked()
+        self._rebuild_pool()
+        self._next_question()
 
     def _clear_answers(self) -> None:
         while self.answers_layout.count():
@@ -212,6 +263,9 @@ class QuizWindow(QWidget):
         self.wrong_count += wrong_this_question
         if all_correct:
             self.correct_count += 1
+            self.wrong_texts.discard(self.current.text)
+        else:
+            self.wrong_texts.add(self.current.text)
         self._update_score_label()
 
         if self.current.description:
@@ -221,6 +275,7 @@ class QuizWindow(QWidget):
             self.result_shown = True
             if self.wrong_count >= WRONG_THRESHOLD:
                 self._show_gif(GIF_BAD_PATH, "Zu viele Fehler!")
+                self._reset_counters()
             else:
                 self._show_gif(GIF_GOOD_PATH, "Gut gemacht!")
         elif (
@@ -229,6 +284,24 @@ class QuizWindow(QWidget):
         ):
             self.result_shown = True
             self._show_gif(GIF_BAD_PATH, "Zu viele Fehler!")
+            self._reset_counters()
+
+    def _reset_counters(self) -> None:
+        self.correct_count = 0
+        self.wrong_count = 0
+        self.answered_count = 0
+        self.result_shown = False
+        self._update_score_label()
+
+    def keyPressEvent(self, event: QKeyEvent) -> None:
+        if event.key() in (Qt.Key.Key_Return, Qt.Key.Key_Enter):
+            if self.answered:
+                self._next_question()
+            else:
+                self._check_answer()
+            event.accept()
+            return
+        super().keyPressEvent(event)
 
     def _show_gif(self, gif_path: Path, title: str) -> None:
         dialog = QDialog(self)
