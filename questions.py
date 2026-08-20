@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import json
 import os
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 
 QUESTIONS_DIR = Path(
@@ -25,6 +25,7 @@ class Question:
     answers: list[Answer]
     description: str | None = None
     image: Path | None = None
+    description_images: list[Path] = field(default_factory=list)
 
     @property
     def correct_answers(self) -> set[str]:
@@ -42,6 +43,9 @@ def _parse_file(path: Path, base_dir: Path) -> list[Question]:
         answers = [Answer(text=a["text"], correct=bool(a["correct"])) for a in q["answers"]]
         image_rel = q.get("image")
         image_path = (base_dir / image_rel).resolve() if image_rel else None
+        description_images = [
+            (base_dir / rel).resolve() for rel in q.get("description_images", [])
+        ]
         questions.append(
             Question(
                 category=category,
@@ -49,6 +53,7 @@ def _parse_file(path: Path, base_dir: Path) -> list[Question]:
                 answers=answers,
                 description=q.get("description"),
                 image=image_path,
+                description_images=description_images,
             )
         )
 

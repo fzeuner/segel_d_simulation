@@ -20,6 +20,7 @@ from PySide6.QtWidgets import (
     QLabel,
     QMessageBox,
     QPushButton,
+    QScrollArea,
     QVBoxLayout,
     QWidget,
 )
@@ -139,11 +140,30 @@ class QuizWindow(QWidget):
         self.answers_layout.setSpacing(8)
         root.addLayout(self.answers_layout)
 
+        description_container = QWidget()
+        description_layout = QVBoxLayout(description_container)
+        description_layout.setContentsMargins(0, 0, 0, 0)
+        description_layout.setSpacing(8)
+
         self.description_label = QLabel()
         self.description_label.setFont(description_font)
         self.description_label.setWordWrap(True)
         self.description_label.setStyleSheet("color: #9aa0a6;")
-        root.addWidget(self.description_label)
+        self.description_label.setAlignment(Qt.AlignmentFlag.AlignTop)
+        description_layout.addWidget(self.description_label)
+
+        self.description_images_layout = QVBoxLayout()
+        self.description_images_layout.setSpacing(8)
+        description_layout.addLayout(self.description_images_layout)
+        self.description_image_labels: list[QLabel] = []
+
+        self.description_scroll = QScrollArea()
+        self.description_scroll.setWidget(description_container)
+        self.description_scroll.setWidgetResizable(True)
+        self.description_scroll.setFrameShape(QFrame.Shape.NoFrame)
+        self.description_scroll.setMaximumHeight(150)
+        self.description_scroll.setStyleSheet("QScrollArea { background: transparent; border: none; }")
+        root.addWidget(self.description_scroll)
         root.addStretch()
 
         self.answer_font = answer_font
@@ -220,6 +240,7 @@ class QuizWindow(QWidget):
         self.category_label.setText(self.current.category)
         self.question_label.setText(self.current.text)
         self.description_label.setText("")
+        self._clear_description_images()
         self._update_score_label()
         self._update_image()
 
@@ -229,6 +250,14 @@ class QuizWindow(QWidget):
             row.set_font(self.answer_font)
             self.answers_layout.addWidget(row)
             self.answer_rows.append(row)
+
+    def _clear_description_images(self) -> None:
+        while self.description_images_layout.count():
+            item = self.description_images_layout.takeAt(0)
+            widget = item.widget()
+            if widget is not None:
+                widget.deleteLater()
+        self.description_image_labels = []
 
     def _update_image(self) -> None:
         if self.current is not None and self.current.image is not None and self.current.image.is_file():
@@ -270,6 +299,19 @@ class QuizWindow(QWidget):
 
         if self.current.description:
             self.description_label.setText(self.current.description)
+
+        for image_path in self.current.description_images:
+            if not image_path.is_file():
+                continue
+            pixmap = QPixmap(str(image_path))
+            if pixmap.isNull():
+                continue
+            label = QLabel()
+            label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            scaled = pixmap.scaledToWidth(500, Qt.TransformationMode.SmoothTransformation)
+            label.setPixmap(scaled)
+            self.description_images_layout.addWidget(label)
+            self.description_image_labels.append(label)
 
         if not self.result_shown and self.answered_count >= QUESTION_LIMIT:
             self.result_shown = True
